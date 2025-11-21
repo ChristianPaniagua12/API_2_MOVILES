@@ -27,10 +27,10 @@ class Usuario
         }
     }
 
-    public function editar($id, $nombre, $correo, $telefono)
+    public function editar($id, $nombre, $correo, $contrasena, $telefono)
     {
         $sql = "UPDATE usuario 
-                SET Nombre='$nombre', Correo='$correo', Telefono='$telefono'
+                SET Nombre='$nombre', Correo='$correo', Contraseña='$contrasena', Telefono='$telefono'
                 WHERE Id='$id'";
         return ejecutarConsulta($sql);
     }
@@ -51,15 +51,6 @@ class Usuario
     public function mostrarPorCorreo($correo)
     {
         $sql = "SELECT * FROM usuario WHERE Correo='$correo'";
-        $res = ejecutarConsulta($sql);
-        return $res ? $res->fetch(PDO::FETCH_ASSOC) : null;
-    }
-
-    public function autenticar($correo, $contrasena)
-    {
-        $sql = "SELECT * FROM usuario
-                WHERE Correo='$correo' AND Contraseña='$contrasena' LIMIT 1";
-
         $res = ejecutarConsulta($sql);
         return $res ? $res->fetch(PDO::FETCH_ASSOC) : null;
     }
