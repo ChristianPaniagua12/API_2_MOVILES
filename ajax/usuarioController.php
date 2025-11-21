@@ -1,6 +1,6 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
@@ -16,34 +16,77 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 $raw = file_get_contents("php://input");
 $body = json_decode($raw, true);
-if (!is_array($body)) { $body = $_POST; }
+if (!is_array($body)) {
+    $body = $_POST;
+}
 
 try {
     switch ($method) {
 
         case "POST":
-            $correo = trim($body["correo"] ?? "");
+            $nombre     = trim($body["nombre"] ?? "");
+            $correo     = trim($body["correo"] ?? "");
             $contrasena = $body["contrasena"] ?? "";
+            $telefono   = trim($body["telefono"] ?? "");
 
-            if ($correo === "" || $contrasena === "") {
-                echo json_encode(["Error" => "Correo y contraseña son obligatorios"]);
+            if ($nombre === "" || $correo === "" || $contrasena === "" || $telefono === "") {
+                echo json_encode(["Error" => "Todos los campos son obligatorios"]);
                 break;
             }
 
-            $res = $usuario->autenticar($correo, $contrasena);
+            $res = $usuario->insertar($nombre, $correo, $contrasena, $telefono);
 
-            if ($res && isset($res["Id"])) {
-                echo json_encode([
-                    "Correcto" => "Acceso concedido",
-                    "usuario"  => $res
-                ]);
+            if ($res === 1) {
+                echo json_encode(["Correcto" => "Usuario registrado"]);
+            } elseif ($res === 1062) {
+                echo json_encode(["Error" => "El correo ya está registrado"]);
             } else {
-                echo json_encode(["Error" => "Credenciales inválidas"]);
+                echo json_encode(["Error" => "No se pudo registrar el usuario"]);
             }
             break;
 
+        case "PUT":
+            $id         = intval($body["id"] ?? 0);
+            $nombre     = trim($body["nombre"] ?? "");
+            $correo     = trim($body["correo"] ?? "");
+            $contrasena = $body["contrasena"] ?? "";
+            $telefono   = trim($body["telefono"] ?? "");
+
+            if ($id <= 0) {
+                echo json_encode(["Error" => "Id de usuario obligatorio"]);
+                break;
+            }
+
+            if ($nombre === "" || $correo === "" || $contrasena === "" || $telefono === "") {
+                echo json_encode(["Error" => "Todos los campos son obligatorios"]);
+                break;
+            }
+
+            $ok = $usuario->editar($id, $nombre, $correo, $contrasena, $telefono);
+            echo json_encode($ok ? ["Correcto" => "Usuario actualizado"] : ["Error" => "No se pudo actualizar el usuario"]);
+            break;
+
+        case "DELETE":
+            $id = intval($body["id"] ?? ($_GET["id"] ?? 0));
+
+            if ($id <= 0) {
+                echo json_encode(["Error" => "Id de usuario obligatorio"]);
+                break;
+            }
+
+            $ok = $usuario->eliminar($id);
+            echo json_encode($ok ? ["Correcto" => "Usuario eliminado"] : ["Error" => "No se pudo eliminar el usuario"]);
+            break;
+
         case "GET":
+            $id     = intval($_GET["id"] ?? 0);
             $correo = $_GET["correo"] ?? "";
+
+            if ($id > 0) {
+                $res = $usuario->mostrar($id);
+                echo json_encode($res ?: ["Error" => "Usuario no encontrado"]);
+                break;
+            }
 
             if ($correo !== "") {
                 $res = $usuario->mostrarPorCorreo($correo);
@@ -55,7 +98,7 @@ try {
             $data = [];
 
             while ($reg = $rspta->fetch(PDO::FETCH_OBJ)) {
-                $data[] = [$reg->Id, $reg->Nombre, $reg->Correo];
+                $data[] = [$reg->Id, $reg->Nombre, $reg->Correo, $reg->Telefono];
             }
 
             echo json_encode([
